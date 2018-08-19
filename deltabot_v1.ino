@@ -21,8 +21,9 @@
 // Constants definitions
 #define GRIP_CLOSE    7
 #define GRIP_OPEN     90
-#define SERVO_OFFSET  117
+#define SERVO_OFFSET  27
 
+// Robot's servos definitions
 Servo servo1;
 Servo servo2;
 Servo servo3;
@@ -34,14 +35,29 @@ struct Angles {
   double theta3;
 };
 
-void close_gripper()
+/*
+ * Close the robot's end effector
+ */
+void closeGripper()
 {
   gripper.write(GRIP_CLOSE);
 }
 
-void open_gripper()
+/*
+ * Open the robot's end effector
+ */
+void openGripper()
 {
   gripper.write(GRIP_OPEN);
+}
+
+/*
+ * Map an angle value to a microseconds value for later use with the Servo library's
+ * 'writeMicroseconds'
+ */
+long angleToMicrosecs(float angle)
+{
+  return map((long) angle * 10, 0, 1800, 700, 2000);
 }
 
 /*
@@ -92,17 +108,21 @@ void setup()
   servo1.write(0);
   servo2.write(0);
   servo3.write(0);
-  close_gripper();
+  closeGripper();
 
   Serial.begin(9600);
 }
 
 void loop() 
 {
-  //servo1.write(160);
-  delay(1000);
-  servo1.write(117);
-  delay(1000);
+  servo1.write(SERVO_OFFSET + 120);
+  servo2.write(SERVO_OFFSET + 120);
+  servo3.write(SERVO_OFFSET + 120);
+  delay(1500);
+  servo1.write(SERVO_OFFSET + 60);
+  servo2.write(SERVO_OFFSET + 60);
+  servo3.write(SERVO_OFFSET + 60);
+  delay(1500);
 }
 
 
