@@ -21,7 +21,9 @@
 // Constants definitions
 #define GRIP_CLOSE    7
 #define GRIP_OPEN     90
-#define SERVO_OFFSET  27
+#define SERVO1_OFFSET 27
+#define SERVO2_OFFSET 21
+#define SERVO3_OFFSET 16
 
 // Robot's servos definitions
 Servo servo1;
@@ -57,7 +59,17 @@ void openGripper()
  */
 long angleToMicrosecs(float angle)
 {
-  return map((long) angle * 10, 0, 1800, 700, 2000);
+  return map((long) angle * 10, 0, 1800, 700, 2300);
+}
+
+/*
+ * Set the robot's servos according to angles given as arguments
+ */
+void setServos(float angle1, float angle2, float angle3)
+{
+  servo1.writeMicroseconds(angleToMicrosecs(angle1 + SERVO1_OFFSET));
+  servo2.writeMicroseconds(angleToMicrosecs(angle2 + SERVO2_OFFSET));
+  servo3.writeMicroseconds(angleToMicrosecs(angle3 + SERVO3_OFFSET));
 }
 
 /*
@@ -96,6 +108,8 @@ Angles inverseKinematics(float x, float y, float z)
   return ret;
 }
 
+int microsecs;
+
 void setup() 
 {
   // Attach servos to their respective pins
@@ -115,14 +129,10 @@ void setup()
 
 void loop() 
 {
-  servo1.write(SERVO_OFFSET + 120);
-  servo2.write(SERVO_OFFSET + 120);
-  servo3.write(SERVO_OFFSET + 120);
-  delay(1500);
-  servo1.write(SERVO_OFFSET + 60);
-  servo2.write(SERVO_OFFSET + 60);
-  servo3.write(SERVO_OFFSET + 60);
-  delay(1500);
+  setServos(90, 90, 90);
+  delay(1000);
+  setServos(45, 45, 45);
+  delay(1000);
 }
 
 
