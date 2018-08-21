@@ -2,15 +2,30 @@
 #include <Servo.h>
 #include <math.h>
 
-// Robot physical parameters in meters (ABB delta robot)
-#define L     0.524
-#define l     1.244
-#define w_b   0.164
-#define u_b   0.327
-#define s_b   0.567
-#define w_p   0.022
-#define u_p   0.044
-#define s_p   0.076
+/* 
+ *  Robot physical parameters in meters 
+ *  (See 'The Delta Parallel Robot: Kinematics Solutions - Robert L. Williams II'
+ *   for reference)
+ */
+// ABB Flexpicker delta robot
+//#define L     0.524
+//#define l     1.244
+//#define w_b   0.164
+//#define u_b   0.327
+//#define s_b   0.567
+//#define w_p   0.022
+//#define u_p   0.044
+//#define s_p   0.076
+
+// EEZYbotDELTA
+#define L     0.0956
+#define l     0.2200
+#define w_b   0.0666
+#define u_b   0.1240
+#define s_b   0.2092
+#define w_p   0.0431
+#define u_p   0.0821
+#define s_p   0.1412
 
 // Pin definitions 
 #define PWM_PIN1  9
@@ -21,7 +36,7 @@
 // Constants definitions
 #define GRIP_CLOSE    7
 #define GRIP_OPEN     90
-#define SERVO1_OFFSET 27
+#define SERVO1_OFFSET 35
 #define SERVO2_OFFSET 21
 #define SERVO3_OFFSET 16
 
@@ -63,10 +78,41 @@ long angleToMicrosecs(float angle)
 }
 
 /*
+ * Command for bringing the gripper back at its home position
+ */
+void moveHome()
+{
+  setServos(120, 120, 120);
+}
+
+/*
  * Set the robot's servos according to angles given as arguments
  */
 void setServos(float angle1, float angle2, float angle3)
 {
+  // Check angles' validity
+  if(angle1 < 30 || angle1 > 150)
+  {
+    Serial.print("[ERROR] Invalid servo 2 angle : "); Serial.println(angle1);
+    return;
+  }
+
+  if(angle2 < 30 || angle2 > 150)
+  {
+    Serial.print("[ERROR] Invalid servo 2 angle : "); Serial.println(angle2);
+    return;
+  }
+
+  if(angle3 < 30 || angle3 > 150)
+  {
+    Serial.print("[ERROR] Invalid servo 3 angle : "); Serial.println(angle3);
+    return;
+  }
+
+  Serial.print("[SET]\t");
+  Serial.print(angle1); Serial.print("\t");
+  Serial.print(angle2); Serial.print("\t");
+  Serial.println(angle3);
   servo1.writeMicroseconds(angleToMicrosecs(angle1 + SERVO1_OFFSET));
   servo2.writeMicroseconds(angleToMicrosecs(angle2 + SERVO2_OFFSET));
   servo3.writeMicroseconds(angleToMicrosecs(angle3 + SERVO3_OFFSET));
@@ -104,11 +150,56 @@ Angles inverseKinematics(float x, float y, float z)
   ret.theta1 = 2 * atan2(-F - sqrt(square(E_1) + square(F) - square(G_1)), G_1 - E_1);
   ret.theta2 = 2 * atan2(-F - sqrt(square(E_2) + square(F) - square(G_2)), G_2 - E_2);
   ret.theta3 = 2 * atan2(-F - sqrt(square(E_3) + square(F) - square(G_3)), G_3 - E_3);
+
+  // Convert to degrees
+  ret.theta1 *= (180.0f / PI);
+  ret.theta2 *= (180.0f / PI);
+  ret.theta3 *= (180.0f / PI);
   
   return ret;
 }
 
-int microsecs;
+/*
+ * Convert angles produced by inverse kinematics into actual servo orientation angles 
+ */
+Angles cleanAngles(Angles dirty)
+{
+  Angles ret;
+
+  ret.theta1 = 90.0f - dirty.theta1;
+  ret.theta2 = 90.0f - dirty.theta2;
+  ret.theta3 = 90.0f - dirty.theta3;
+
+  if(ret.theta1 > 180)
+    ret.theta1 -= 360;
+  else if(ret.theta1 < 0)
+    ret.theta1 += 360;
+
+  if(ret.theta2 > 180)
+    ret.theta2 -= 360;
+  else if(ret.theta2 < 0)
+    ret.theta2 += 360;
+
+  if(ret.theta3 > 180)
+    ret.theta3 -= 360;
+  else if(ret.theta3 < 0)
+    ret.theta3 += 360;
+
+  return ret;
+}
+
+/*
+ * Given a cartesian point expressed in the robot's frame of reference,
+ * move the robot's platform to that position
+ */
+void moveToPoint(float x, float y, float z)
+{
+  Angles res = cleanAngles(inverseKinematics(x, y, z));
+  setServos(res.theta1, res.theta2, res.theta3);
+}
+
+float x[50];
+float y[50];
 
 void setup() 
 {
@@ -119,23 +210,28 @@ void setup()
   gripper.attach(GRIP_PIN);
 
   // Move servos to initial positions
-  servo1.write(0);
-  servo2.write(0);
-  servo3.write(0);
+  moveHome();
   closeGripper();
+
+  // Initial computations
+  for(int i = 0; i < 50; ++i)
+  {
+    x[i] = -0.07 + (0.14f / 50.0f) * i;
+    y[i] = sqrt(square(0.07) - square(x[i]));
+  }
 
   Serial.begin(9600);
 }
 
-void loop() 
+void loop()
 {
-  setServos(90, 90, 90);
-  delay(1000);
-  setServos(45, 45, 45);
-  delay(1000);
+  for(int i = 0; i < 50; ++i)
+  {
+    moveToPoint(x[i], y[i], -0.18);
+  }
+  for(int i = 49; i > 0; --i)
+  {
+    moveToPoint(x[i], -y[i], -0.18);
+  }
 }
-
-
-
-
 
