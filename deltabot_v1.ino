@@ -52,6 +52,11 @@ struct Angles {
   double theta3;
 };
 
+// Robot position
+double pos_x;
+double pos_y;
+double pos_z;
+
 /*
  * Close the robot's end effector
  */
@@ -82,7 +87,7 @@ long angleToMicrosecs(float angle)
  */
 void moveHome()
 {
-  setServos(120, 120, 120);
+  moveToPoint(0, 0, -0.15);
 }
 
 /*
@@ -91,19 +96,19 @@ void moveHome()
 void setServos(float angle1, float angle2, float angle3)
 {
   // Check angles' validity
-  if(angle1 < 30 || angle1 > 150)
+  if(angle1 < 0 || angle1 > 150 || isnan(angle1))
   {
     Serial.print("[ERROR] Invalid servo 2 angle : "); Serial.println(angle1);
     return;
   }
 
-  if(angle2 < 30 || angle2 > 150)
+  if(angle2 < 0 || angle2 > 150 || isnan(angle2))
   {
     Serial.print("[ERROR] Invalid servo 2 angle : "); Serial.println(angle2);
     return;
   }
 
-  if(angle3 < 30 || angle3 > 150)
+  if(angle3 < 0 || angle3 > 150 || isnan(angle3))
   {
     Serial.print("[ERROR] Invalid servo 3 angle : "); Serial.println(angle3);
     return;
@@ -196,10 +201,31 @@ void moveToPoint(float x, float y, float z)
 {
   Angles res = cleanAngles(inverseKinematics(x, y, z));
   setServos(res.theta1, res.theta2, res.theta3);
+  pos_x = x; 
+  pos_y = y;
+  pos_z = z;
 }
 
-float x[50];
-float y[50];
+/*
+ * Move the robot's gripper to the specified position along a line from the initial
+ * position to the new point
+ * 
+ * Arguments:
+ *  -num_points:  Number of points generated from the line
+ */
+void lineToPoint(float x, float y, float z, int num_points)
+{
+  double init_x = pos_x;
+  double init_y = pos_y;
+  double init_z = pos_z;
+  
+  double inc_x = (x - pos_x) / ((float) num_points);
+  double inc_y = (y - pos_y) / ((float) num_points);
+  double inc_z = (z - pos_z) / ((float) num_points);
+
+  for(int i = 1; i <= num_points; ++i)
+    moveToPoint(init_x + (i * inc_x), init_y + (i * inc_y), init_z + (i * inc_z));
+}
 
 void setup() 
 {
@@ -212,26 +238,20 @@ void setup()
   // Move servos to initial positions
   moveHome();
   closeGripper();
-
-  // Initial computations
-  for(int i = 0; i < 50; ++i)
-  {
-    x[i] = -0.07 + (0.14f / 50.0f) * i;
-    y[i] = sqrt(square(0.07) - square(x[i]));
-  }
+  delay(1000);
 
   Serial.begin(9600);
 }
 
 void loop()
 {
-  for(int i = 0; i < 50; ++i)
-  {
-    moveToPoint(x[i], y[i], -0.18);
-  }
-  for(int i = 49; i > 0; --i)
-  {
-    moveToPoint(x[i], -y[i], -0.18);
-  }
+  lineToPoint(0.05, 0, -0.2, 50);
+  delay(100);
+  lineToPoint(0.05, 0, -0.25, 50);
+  delay(100);
+  lineToPoint(-0.05, 0, -0.25, 50);
+  delay(100);
+  lineToPoint(-0.05, 0, -0.2, 50);
+  delay(100);
 }
 
