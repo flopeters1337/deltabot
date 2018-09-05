@@ -36,9 +36,11 @@
 // Constants definitions
 #define GRIP_CLOSE    7
 #define GRIP_OPEN     90
-#define SERVO1_OFFSET 35
+#define SERVO1_OFFSET 30
 #define SERVO2_OFFSET 21
 #define SERVO3_OFFSET 16
+#define MAX_POINTS    100
+#define SPEED         4
 
 // Robot's servos definitions
 Servo servo1;
@@ -213,8 +215,14 @@ void moveToPoint(float x, float y, float z)
  * Arguments:
  *  -num_points:  Number of points generated from the line
  */
-void lineToPoint(float x, float y, float z, int num_points)
+void lineToPoint(float x, float y, float z)
 {
+  double max_gap = max(max(abs(x - pos_x), abs(y - pos_y)), abs(z - pos_z));
+  if(max_gap < 0.001)
+    return;
+  
+  int num_points = constrain(MAX_POINTS / (SPEED * (max_gap * 10)), 1, MAX_POINTS);
+  
   double init_x = pos_x;
   double init_y = pos_y;
   double init_z = pos_z;
@@ -245,13 +253,19 @@ void setup()
 
 void loop()
 {
-  lineToPoint(0.05, 0, -0.2, 50);
-  delay(100);
-  lineToPoint(0.05, 0, -0.25, 50);
-  delay(100);
-  lineToPoint(-0.05, 0, -0.25, 50);
-  delay(100);
-  lineToPoint(-0.05, 0, -0.2, 50);
-  delay(100);
+  openGripper();
+  delay(400);
+  lineToPoint(0, 0, -0.298);
+  delay(1000);
+  closeGripper();
+  delay(400);
+  lineToPoint(0, 0, -0.17);
+  delay(400);
+  lineToPoint(0, 0, -0.28);
+  delay(1000);
+  openGripper();
+  delay(400);
+  lineToPoint(0, 0, -0.17);
+  delay(400);
 }
 
